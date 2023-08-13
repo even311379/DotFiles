@@ -202,6 +202,8 @@ keys = [
         lazy.layout.shrink().when(layout=["monadtall", "monadwide"]),
         desc="Grow window to the left",
     ),
+    # test hide / show bar
+    Key([mod], "z", lazy.hide_show_bar("bottom"), desc="Hides the bar"),
 ]
 
 main_groups = [str(i) for i in range(1, 7)]
@@ -449,13 +451,14 @@ layout_theme = {
 # from dt
 layouts = [
     # layout.Bsp(**layout_theme),
-    # layout.Floating(**layout_theme)
+    # layout.Floating(**layout_theme),
     # layout.RatioTile(**layout_theme),
     # layout.Tile(shift_windows=True, **layout_theme),
     # layout.VerticalTile(**layout_theme),
     # layout.Matrix(**layout_theme),
     layout.MonadTall(**layout_theme),
     # layout.MonadWide(**layout_theme),
+    layout.Floating(**layout_theme),
     layout.Max(
         border_width=0,
         margin=0,
@@ -483,7 +486,7 @@ layouts = [
         vspace=3,
         panel_width=240,
     ),
-    layout.Zoomy(**layout_theme),
+    # layout.Zoomy(**layout_theme),
 ]
 
 widget_defaults = dict(font="Ubuntu Bold", fontsize=24, padding=0, background=colors[0])
@@ -630,10 +633,36 @@ def init_widgets_screen2():
     return widgets_screen
 
 
+bottom_bar1 = bar.Bar(
+    widgets=[
+        widget.Spacer(),
+        widget.TaskList(
+            max_title_width=192,
+            txt_floating="🗗",
+            txt_maximized="🗖",
+            txt_minimized="🗕"
+            ),
+        widget.Spacer(),
+        ],
+    size=36)
+
+bottom_bar2 = bar.Bar(
+    widgets=[
+        widget.Spacer(),
+        widget.TaskList(
+            max_title_width=192,
+            txt_floating="🗗",
+            txt_maximized="🗖",
+            txt_minimized="🗕"
+            ),
+        widget.Spacer(),
+        ],
+    size=36)
+
 def init_screens():
     return [
-        Screen(top=bar.Bar(widgets=init_widgets_screen1(), size=36)),
-        Screen(top=bar.Bar(widgets=init_widgets_screen2(), size=36)),
+        Screen(top=bar.Bar(widgets=init_widgets_screen1(), size=36), bottom=bottom_bar1),
+        Screen(top=bar.Bar(widgets=init_widgets_screen2(), size=36), bottom=bottom_bar2),
     ]
 
 
@@ -836,12 +865,53 @@ def autostart():
     home = os.path.expanduser("~/.config/qtile/autostart.sh")
     subprocess.call([home])
 
+# print(dir(qtile.current_group.layout))
+# print(dir(qtile.current_layout.name))
+
+# @hook.subscribe.focus_change
+# def check_floating():
+#     if qtile.current_group.current_layout  == 1:
+#         bottom_bar.show(True)
+#         # bottom_bar2.show(True)
+#     else:
+#         bottom_bar.show(False)
+#         # bottom_bar1.show(True)
+
+@hook.subscribe.layout_change
+def check_new_floating(new_layout, new_group):
+    should_decrease_height = False
+    if new_group.current_layout == 1 and new_group.name in ["7", "8", "9"]:
+        bottom_bar2.show(True)
+        should_decrease_height = True
+    elif new_group.current_layout == 1:
+        bottom_bar1.show(True)
+        should_decrease_height = True
+    else:
+        bottom_bar1.show(False)
+        bottom_bar2.show(False)
+    if should_decrease_height:
+        for w in new_group.windows:
+            w.place(w.x, w.y, w.width, w.height - 16, 2, "#ffffff")
+            # with open("/home/even/qinfo.txt", "w") as f:
+            #     f.write(str(dir(w)))
+            #     f.write("\n......\n")
+            #     f.write(f"{w.x} {w.y}")
+            #     # f.write(f"{window.get_size()}/n")
+            # window.toggle_floating()
+            # window.place(4000, 100, 500, 300, 2, "#ffffff")
+            # info = window.info()
+            # w,h = window.get_size()
+            # window.set_size_floating([100, 50])
 
 @hook.subscribe.screens_reconfigured
 def send_to_second_screen():
     if len(qtile.screens) > 1:
         qtile.groups_map["7"].cmd_toscreen(1, toggle=False)
 
+@hook.subscribe.startup
+def startup():
+    bottom_bar1.show(False)
+    bottom_bar2.show(False)
 
 # @hook.subscribe.startup
 # def match_bar_with_picom():
